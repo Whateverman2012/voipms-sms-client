@@ -38,6 +38,7 @@ import net.kourlas.voipms_sms.utils.logException
 import net.kourlas.voipms_sms.utils.validatePhoneNumber
 import java.io.IOException
 import java.net.URLEncoder
+import java.nio.charset.Charset
 import java.util.*
 
 /**
@@ -191,17 +192,34 @@ class SendMessageService : JobIntentService() {
 
         // If the message text exceeds the maximum length of an SMS message,
         // split it into multiple message texts
-        val length = applicationContext.resources.getInteger(
-            R.integer.sms_max_length)
+
+        val sms_max_length = applicationContext.resources.getInteger(R.integer.sms_max_length)
         val messageTexts = mutableListOf<String>()
+        var sub_length_utf8_char: Int
+        var sub_length: Int
+        val charSizeInUTF8 :(Char)->Int  = {c:Char->c.toString().toByteArray(Charsets.UTF_8).size}
+
         do {
-            val sublength: Int = if (messageText.length > length) {
-                length
-            } else {
-                messageText.length
+            var msg_max_chunk = messageText.substring(0, Math.min(messageText.length, sms_max_length))
+
+            sub_length = 0
+            sub_length_utf8_char = 0
+
+            for(c in msg_max_chunk) { // check each char size in utf8
+                var free_space = sms_max_length - sub_length_utf8_char
+                if(free_space <= 1) { // still room for one small char
+                    if((free_space == 1) and (charSizeInUTF8(c) == 1)) sub_length++
+                    break
+                }
+                sub_length_utf8_char += charSizeInUTF8(c)
+                sub_length++
             }
-            messageTexts.add(messageText.substring(0, sublength))
-            messageText = messageText.substring(sublength)
+            //sub_length = Math.min(sub_length, sms_max_length)
+
+            messageTexts.add(messageText.substring(0, sub_length))
+            messageTexts.add("utf8 size: "+messageText.substring(0, sub_length).toByteArray(Charsets.UTF_8).size.toString())
+            messageText = messageText.substring(sub_length)
+
         } while (messageText.isNotEmpty())
 
         return IntentData(

@@ -339,27 +339,30 @@ class ConversationActivity : AppCompatActivity(), ActionMode.Callback,
             R.integer.sms_max_length)
         val charsRemainingTextView = findViewById<TextView>(
             R.id.chars_remaining_text)
-
-        if (newText.length <= maxLength) {
+        val new_text_length = newText.toByteArray(Charsets.UTF_8).size
+        // Not accurate when 2 bytes char is split at boundary. One count is missed since the 2 bytes
+        // char has to move completely on next chunk.
+        if (new_text_length <= maxLength) {
             if (newText.length >= maxLength - 10) {
                 // Show "N" when there are N characters left in the first
                 // message and N <= 10
                 charsRemainingTextView.visibility = View.VISIBLE
                 charsRemainingTextView.text =
-                    (maxLength - newText.length).toString()
+                    (maxLength - new_text_length).toString()
             } else {
                 // Show nothing
                 charsRemainingTextView.visibility = View.GONE
             }
+
         } else {
             // Show "N / M" when there are M messages and M >= 2; N is the
             // number of characters left in the current message
             charsRemainingTextView.visibility = View.VISIBLE
 
-            val charsRemaining = if (newText.length % maxLength != 0) {
-                maxLength - newText.length % maxLength
+            val charsRemaining = if (new_text_length % maxLength != 0) {
+                maxLength - new_text_length % maxLength
             } else 0
-            val numMessages = newText.length / maxLength + 1
+            val numMessages = new_text_length / maxLength + 1
             charsRemainingTextView.text = getString(
                 R.string.conversation_char_rem,
                 charsRemaining, numMessages)
