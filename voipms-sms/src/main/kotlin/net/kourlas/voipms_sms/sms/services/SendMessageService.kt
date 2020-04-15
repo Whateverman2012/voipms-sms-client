@@ -195,23 +195,25 @@ class SendMessageService : JobIntentService() {
 
         val sms_max_length = applicationContext.resources.getInteger(R.integer.sms_max_length)
         val messageTexts = mutableListOf<String>()
-        var sub_length_utf8_char: Int
+        var sub_length_utf8: Int
         var sub_length: Int
         val charSizeInUTF8 :(Char)->Int  = {c:Char->c.toString().toByteArray(Charsets.UTF_8).size}
 
         do {
+            // maximum chunk : if all chars are 1 byte size.
             var msg_max_chunk = messageText.substring(0, Math.min(messageText.length, sms_max_length))
 
             sub_length = 0
-            sub_length_utf8_char = 0
+            sub_length_utf8 = 0
 
-            for(c in msg_max_chunk) { // check each char size in utf8
-                var free_space = sms_max_length - sub_length_utf8_char
-                if(free_space <= 1) { // still room for one small char
+            // calculate sub_length according to utf8 size of each char
+            for(c in msg_max_chunk) {
+                var free_space = sms_max_length - sub_length_utf8
+                if(free_space <= 1) { // fit or still room for one char of 1 byte
                     if((free_space == 1) and (charSizeInUTF8(c) == 1)) sub_length++
                     break
                 }
-                sub_length_utf8_char += charSizeInUTF8(c)
+                sub_length_utf8 += charSizeInUTF8(c)
                 sub_length++
             }
             //sub_length = Math.min(sub_length, sms_max_length)
